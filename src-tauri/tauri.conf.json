@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Node Manager",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "io.github.pablomedina.nodemanager",
   "build": {
     "frontendDist": "../dist",
     "beforeDevCommand": "npm run dev",

@@ -22,6 +22,8 @@ Esto arranca el front con Vite y el proceso nativo de Tauri.
 
 ## Cómo compilar un instalable
 
+El `identifier` en `src-tauri/tauri.conf.json` tiene que ser un **bundle ID único** (Tauri no permite el valor por defecto `com.tauri.dev`). Para este proyecto se usa `io.github.pablomedina.nodemanager`, derivado de la URL del repo [github.com/pablo-medina/node-manager](https://github.com/pablo-medina/node-manager) (`io.github` + usuario y nombre del repo **sin guiones**, para cumplir reglas de empaquetado multiplataforma).
+
 ```powershell
 npm install
 npm run tauri:build
@@ -60,7 +62,7 @@ La configuración (directorios, tema, proxy) se persiste mediante los comandos T
 
 ## Contribuir y problemas
 
-Podés reportar mejoras o fallos abriendo issues o pull requests en el repositorio del proyecto (cuando esté publicado enlazalo acá).
+Podés reportar mejoras o fallos en [github.com/pablo-medina/node-manager](https://github.com/pablo-medina/node-manager) (issues y pull requests).
 
 ---
 
