@@ -1,6 +1,6 @@
 [package]
 name = "node-manager"
-version = "0.1.0"
+version = "0.1.2"
 description = "Node Manager GUI"
 authors = ["Pablo Medina"]
 license = "MIT"

@@ -348,8 +348,8 @@ const ICON_RETRY = `<svg ${SVG_OPTS} width="18" height="18" viewBox="0 0 24 24" 
 const ICON_CLOSE = `<svg ${SVG_OPTS} width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
 const ICON_DELETE = `<svg ${SVG_OPTS} width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
 const ICON_PACKAGES = `<svg ${SVG_OPTS} width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M9 2v4h6V2"/><path d="M8 12h8M8 16h5"/></svg>`;
-/** Ícono hoja para branding (estilo referencia zen). */
-const ICON_LEAF = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 21c-.5-.2-9-8.5-9-14 0-3 2.5-5.5 5.5-5.8C14 .5 20 7 21 13c1 9-10 11-10 11v4h-1v-7Z"/><path d="M13 21c-.2-2-.4-11.8 6-17.9A9.6 9.6 0 0013 21Z" opacity="0.62"/></svg>`;
+/** Ícono marca: nodo/terminal para representar gestión de Node.js. */
+const ICON_LEAF = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 20 6.6v10.8L12 22 4 17.4V6.6L12 2Z"/><path d="M9.25 10.4v4.2"/><path d="M12 9.4v5.2"/><path d="M14.75 11.2v3.4"/></svg>`;
 
 /** Íconos de ventana: el glifo Unicode □ se ve muy chico respecto del − y la ✕ en Segoe UI. */
 const WC_MAXIMIZE = `<svg ${SVG_OPTS} class="wc-icon-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="0.75" fill="none"/></svg>`;
@@ -391,6 +391,11 @@ const formatError = (err: unknown) => {
     return String((err as { message: unknown }).message);
   }
   return "Ocurrió un error inesperado.";
+};
+
+const readOptionalInput = (selector: string): string | null => {
+  const value = (document.querySelector<HTMLInputElement>(selector)?.value || "").trim();
+  return value || null;
 };
 
 const withBusy = async (message: string, fn: () => Promise<void>) => {
@@ -811,7 +816,7 @@ function render() {
                 <div class="proxy-master-row">
                   <div class="proxy-master-copy">
                     <strong>Habilitar proxy</strong>
-                    <p>Usá valores manuales, variables de entorno del proceso, o ambos combinados por categoría (HTTP / HTTPS / NO_PROXY).</p>
+                    <p>Definí proxy manual o por variables de entorno.</p>
                   </div>
                   <label class="switch-inline proxy-master-toggle"><input id="proxyEnabled" type="checkbox" ${
                     cfg?.proxy.enabled ? "checked" : ""
@@ -823,7 +828,7 @@ function render() {
                     <input id="useEnvHttp" type="checkbox" ${cfg?.proxy.use_env_http_proxy ? "checked" : ""} ${
                       state.busy ? "disabled" : ""
                     }/>
-                    <label for="useEnvHttp" class="proxy-label">Preferir las variables <code>HTTP_PROXY</code> y, si falta la primera, <code>http_proxy</code>.</label>
+                    <label for="useEnvHttp" class="proxy-label">Usar <code>HTTP_PROXY</code>/<code>http_proxy</code>.</label>
                   </div>
                   <label class="proxy-input-label" for="httpProxy">URL manual HTTP (si no usás sólo entorno)</label>
                   <input id="httpProxy" value="${cfg?.proxy.http_proxy ?? ""}" placeholder="http://usuario:pass@host:puerto" ${
@@ -836,7 +841,7 @@ function render() {
                     <input id="useEnvHttps" type="checkbox" ${cfg?.proxy.use_env_https_proxy ? "checked" : ""} ${
                       state.busy ? "disabled" : ""
                     }/>
-                    <label for="useEnvHttps" class="proxy-label">Preferir las variables <code>HTTPS_PROXY</code> y, si falta la primera, <code>https_proxy</code>.</label>
+                    <label for="useEnvHttps" class="proxy-label">Usar <code>HTTPS_PROXY</code>/<code>https_proxy</code>.</label>
                   </div>
                   <label class="proxy-input-label" for="httpsProxy">URL manual HTTPS</label>
                   <input id="httpsProxy" value="${cfg?.proxy.https_proxy ?? ""}" placeholder="http://usuario:pass@host:puerto" ${
@@ -849,7 +854,7 @@ function render() {
                     <input id="useEnvNoProxy" type="checkbox" ${cfg?.proxy.use_env_no_proxy ? "checked" : ""} ${
                       state.busy ? "disabled" : ""
                     }/>
-                    <label for="useEnvNoProxy" class="proxy-label">Preferir las variables <code>NO_PROXY</code> y, si falta la primera, <code>no_proxy</code>.</label>
+                    <label for="useEnvNoProxy" class="proxy-label">Usar <code>NO_PROXY</code>/<code>no_proxy</code>.</label>
                   </div>
                   <label class="proxy-input-label" for="noProxy">Lista manual NO_PROXY</label>
                   <input id="noProxy" value="${cfg?.proxy.no_proxy ?? ""}" placeholder="localhost,127.0.0.1,.dominio.local" ${
@@ -919,47 +924,48 @@ function render() {
   });
   syncProxyInputDisabled();
 
-  document.querySelector<HTMLButtonElement>("#saveAllSettings")?.addEventListener("click", () =>
-    withBusy("guardando configuración", async () => {
-      if (!state.config) {
-        return;
-      }
-      const base_dir = (document.querySelector<HTMLInputElement>("#baseDir")?.value || "").trim();
-      const repository_path = (document.querySelector<HTMLInputElement>("#repoDir")?.value || "").trim();
-      const theme = (document.querySelector<HTMLSelectElement>("#themeSelect")?.value || "system").trim();
-      const enabled = document.querySelector<HTMLInputElement>("#proxyEnabled")?.checked ?? false;
-      const use_env_http_proxy =
-        document.querySelector<HTMLInputElement>("#useEnvHttp")?.checked ?? false;
-      const use_env_https_proxy =
-        document.querySelector<HTMLInputElement>("#useEnvHttps")?.checked ?? false;
-      const use_env_no_proxy =
-        document.querySelector<HTMLInputElement>("#useEnvNoProxy")?.checked ?? false;
-      const http_proxy = (document.querySelector<HTMLInputElement>("#httpProxy")?.value || "").trim() || null;
-      const https_proxy = (document.querySelector<HTMLInputElement>("#httpsProxy")?.value || "").trim() || null;
-      const no_proxy = (document.querySelector<HTMLInputElement>("#noProxy")?.value || "").trim() || null;
+  document.querySelector<HTMLButtonElement>("#saveAllSettings")?.addEventListener("click", () => {
+    if (!state.config) {
+      return;
+    }
+    // Leemos los inputs antes del render de "busy" para no perder edición en curso.
+    const draft = {
+      base_dir: (document.querySelector<HTMLInputElement>("#baseDir")?.value || "").trim(),
+      repository_path: (document.querySelector<HTMLInputElement>("#repoDir")?.value || "").trim(),
+      theme: (document.querySelector<HTMLSelectElement>("#themeSelect")?.value || "system").trim(),
+      enabled: document.querySelector<HTMLInputElement>("#proxyEnabled")?.checked ?? false,
+      use_env_http_proxy: document.querySelector<HTMLInputElement>("#useEnvHttp")?.checked ?? false,
+      use_env_https_proxy: document.querySelector<HTMLInputElement>("#useEnvHttps")?.checked ?? false,
+      use_env_no_proxy: document.querySelector<HTMLInputElement>("#useEnvNoProxy")?.checked ?? false,
+      http_proxy: readOptionalInput("#httpProxy"),
+      https_proxy: readOptionalInput("#httpsProxy"),
+      no_proxy: readOptionalInput("#noProxy"),
+    };
+
+    void withBusy("guardando configuración", async () => {
       const proxy: ProxyConfig = {
-        enabled,
-        use_env_http_proxy,
-        use_env_https_proxy,
-        use_env_no_proxy,
-        http_proxy,
-        https_proxy,
-        no_proxy,
+        enabled: draft.enabled,
+        use_env_http_proxy: draft.use_env_http_proxy,
+        use_env_https_proxy: draft.use_env_https_proxy,
+        use_env_no_proxy: draft.use_env_no_proxy,
+        http_proxy: draft.http_proxy,
+        https_proxy: draft.https_proxy,
+        no_proxy: draft.no_proxy,
       };
       const nextCfg: AppConfig = {
-        ...state.config,
-        base_dir,
-        repository_path,
-        ui: { theme },
+        ...state.config!,
+        base_dir: draft.base_dir,
+        repository_path: draft.repository_path,
+        ui: { theme: draft.theme },
         proxy,
       };
       state.config = await invoke<AppConfig>("save_settings", { config: nextCfg });
-      setTheme(theme);
+      setTheme(draft.theme);
       await refreshVersionsAndReports();
       notify("Configuración guardada.");
       render();
-    }),
-  );
+    });
+  });
 
   const installBtn = document.querySelector<HTMLButtonElement>("#installBtn");
   const versionInput = document.querySelector<HTMLInputElement>("#versionInput");
